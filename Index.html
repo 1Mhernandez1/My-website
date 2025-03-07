@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Materials Management System</title>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- SheetJS library for Excel parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary-dark: #0A2342;
+      --primary-medium: #2A4A6E;
+      --primary-light: #4D7BAF;
+      --accent-blue: #6B9AC4;
+      --background: #F0F4F8;
+      --success: #4CAF50;
+      --danger: #e74c3c;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--background);
+      color: var(--primary-dark);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      margin: 0.5rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+      background: linear-gradient(135deg, var(--primary-medium), var(--primary-light));
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .btn i {
+      font-size: 1.2em;
+    }
+
+    .hidden { 
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .visible {
+      display: block;
+      opacity: 1;
+    }
+
+    table {
+      width: 100%;
+      margin: 2rem 0;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 15px rgba(0,0,0,0.1);
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background: var(--primary-dark);
+      color: white;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+
+    .header {
+      background: var(--primary-dark);
+      color: white;
+      padding: 1.5rem 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      margin-top: 2rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    input, select {
+      padding: 0.8rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+      background: white;
+    }
+
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem top 50%;
+      background-size: 0.65rem auto;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-light);
+      outline: none;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1.5rem 0;
+    }
+
+    .checkbox-cell {
+      width: 40px;
+      text-align: center;
+    }
+
+    .timestamp {
+      color: #666;
+      font-size: 0.9em;
+      white-space: nowrap;
+    }
+
+    .save-inventory-btn {
+      background: linear-gradient(135deg, var(--success), #45a049);
+    }
+
+    .delete-btn {
+      background: linear-gradient(135deg, var(--danger), #c0392b);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>📦 Materials Management System</h1>
+    </div>
+  </div>
+
+  <!-- Enhanced Home Section -->
+  <div id="home" class="container visible" style="
+    background: linear-gradient(rgba(10,35,66,0.7), rgba(10,35,66,0.7)), url('hero-image.jpg') no-repeat center center/cover;
+    color: white;
+    padding: 4rem 2rem;
+    text-align: center;
+  ">
+    <h1 style="font-size: 3rem; margin-bottom: 1rem;">Welcome to Premium Materials Management</h1>
+    <p style="font-size: 1.25rem; margin-bottom: 2rem;">Efficient, reliable, and modern solutions for managing your materials.</p>
+    <div class="grid" style="background: rgba(255, 255, 255, 0.9); border-radius: 8px; padding: 1rem; display: inline-block;">
+      <button class="btn" data-section="warehouse">
+        <i class="fas fa-warehouse"></i>
+        Warehouse Management
+      </button>
+      <button class="btn" data-section="reports">
+        <i class="fas fa-chart-bar"></i>
+        Analytics &amp; Reports
+      </button>
+      <button class="btn" data-section="tooling">
+        <i class="fas fa-tools"></i>
+        Tooling Inventory
+      </button>
+    </div>
+  </div>
+
+  <!-- Warehouse Section -->
+  <div id="warehouse" class="container hidden">
+    <div class="action-bar">
+      <button class="btn" data-section="home">
+        <i class="fas fa-arrow-left"></i>
+        Back
+      </button>
+      <button class="btn" data-section="addWarehouse">
+        <i class="fas fa-plus"></i>
+        Add Warehouse
+      </button>
+      <button class="btn delete-btn" onclick="deleteSelectedWarehouses()">
+        <i class="fas fa-trash"></i>
+        Delete Selected
+      </button>
+    </div>
+    <table id="warehouseTable">
+      <thead>
+        <tr>
+          <th class="checkbox-cell">Select</th>
+          <th>Warehouse Name</th>
+          <th>Project Name</th>
+          <th>Type</th>
+          <th>Total Inventory</th>
+          <th>Stock Level</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Add Warehouse Form -->
+  <div id="addWarehouse" class="container hidden">
+    <div class="action-bar">
+      <button class="btn" data-section="warehouse">
+        <i class="fas fa-arrow-left"></i>
+        Back
+      </button>
+    </div>
+    <div class="form-container">
+      <div class="input-group">
+        <input id="warehouseName" placeholder="Warehouse Name" required>
+      </div>
+      <div class="input-group">
+        <input id="projectName" placeholder="Project Name" required>
+      </div>
+      <div class="input-group">
+        <input id="projectType" placeholder="Project Type" required>
+      </div>
+      <div class="input-group">
+        <input id="onHand" placeholder="On Hand Inventory" type="number" min="0" required>
+      </div>
+      <div class="input-group">
+        <input id="backOrdered" placeholder="Back Ordered Inventory" type="number" min="0" required>
+      </div>
+      <button class="btn" onclick="addWarehouse()">
+        <i class="fas fa-save"></i>
+        Save Warehouse
+      </button>
+    </div>
+  </div>
+
+  <!-- Inventory Breakdown Section with Search & Import Excel -->
+  <div id="inventoryBreakdown" class="container hidden">
+    <div class="action-bar">
+      <button class="btn" data-section="warehouse">
+        <i class="fas fa-arrow-left"></i>
+        Back
+      </button>
+      <div class="search-container" style="display: flex; gap: 0.5rem; flex-grow: 1;">
+        <input type="text" id="inventorySearch" placeholder="Search inventory..." style="flex: 1; max-width: 300px;">
+        <button class="btn" onclick="searchInventory()">
+          <i class="fas fa-search"></i>
+          Search
+        </button>
+      </div>
+      <button class="btn" data-section="addInventory">
+        <i class="fas fa-plus"></i>
+        Add Inventory
+      </button>
+      <button class="btn" id="modifyInventoryBtn">
+        <i class="fas fa-edit"></i>
+        Edit Mode
+      </button>
+      <button class="btn save-inventory-btn" id="saveInventoryBtn">
+        <i class="fas fa-save"></i>
+        Save Changes
+      </button>
+      <button class="btn" onclick="importExcel()">
+        <i class="fas fa-file-import"></i>
+        Delete Selected
+      </button>
+      <button class="btn" onclick="importExcel()">
+        <i class="fas fa-file-import"></i>
+        Import Excel
+      </button>
+    </div>
+    <table id="inventoryTable">
+      <thead>
+        <tr>
+          <th class="checkbox-cell">Select</th> <!-- Added checkbox header -->
+          <th>Name</th>
+          <th>Description</th>
+          <th>Location</th>
+          <th>Qty on Hand</th>
+          <th>Unit of Issue</th>
+          <th>Back Ordered Qty</th>
+          <th>Manufacturer Name</th>
+          <th>Manufacturer Part Number</th>
+          <th>Last Updated</th> <!-- Now properly aligned -->
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Hidden File Input for Excel Import -->
+  <input type="file" id="excelInput" style="display: none;" accept=".xlsx, .xls" />
+
+  <!-- Add Inventory Form -->
+  <div id="addInventory" class="container hidden">
+    <div class="action-bar">
+      <button class="btn" data-section="inventoryBreakdown">
+        <i class="fas fa-arrow-left"></i>
+        Back
+      </button>
+    </div>
+    <div class="form-container">
+      <div class="input-group">
+        <input id="itemName" placeholder="Item Name" required>
+      </div>
+      <div class="input-group">
+        <input id="itemDescription" placeholder="Description">
+      </div>
+      <div class="input-group">
+        <input id="itemLocation" placeholder="Location">
+      </div>
+      <div class="input-group">
+        <input id="itemQtyOnHand" placeholder="Qty on Hand" type="number" min="0" required>
+      </div>
+      <div class="input-group">
+        <select id="itemUnitOfIssue">
+          <option value="EA">Each</option>
+          <option value="PK">Pack</option>
+          <option value="BX">Box</option>
+          <option value="PL">Pallet</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <input id="itemBackOrderedQty" placeholder="Back Ordered Qty" type="number" min="0">
+      </div>
+      <div class="input-group">
+        <input id="manufacturerName" placeholder="Manufacturer Name">
+      </div>
+      <div class="input-group">
+        <input id="manufacturerPartNumber" placeholder="Manufacturer Part Number">
+      </div>
+      <button class="btn" onclick="addInventoryItem()">
+        <i class="fas fa-save"></i>
+        Save Inventory Item
+      </button>
+    </div>
+    <button class="btn delete-btn" onclick="deleteSelectedInventory()">
+      <i class="fas fa-trash"></i>
+      Delete Selected
+    </button>
+  </div>
+
+  <!-- Analytics & Reports Section -->
+  <div id="reports" class="container hidden">
+    <div class="action-bar">
+      <button class="btn" data-section="home">
+        <i class="fas fa-arrow-left"></i>
+        Back to Home
+      </button>
+    </div>
+    <h2>Comprehensive Dashboard</h2>
+    <!-- Dashboard Content Placeholder -->
+    <div class="dashboard" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>Total Inventory</h3>
+        <p>Placeholder data</p>
+      </div>
+      <div style="flex: 1; min-width: 200px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>Stock Turnover</h3>
+        <p>Placeholder data</p>
+      </div>
+      <div style="flex: 1; min-width: 200px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>Order Fulfillment</h3>
+        <p>Placeholder data</p>
+      </div>
+    </div>
+    <h2>Customizable &amp; Exportable Reports</h2>
+    <!-- Reports Section Content -->
+    <div class="reports-section">
+      <p>Customize your report parameters below and export the data:</p>
+      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <input type="date" id="reportStartDate">
+        <input type="date" id="reportEndDate">
+        <select id="reportType">
+          <option value="inventory">Inventory Report</option>
+          <option value="orders">Orders Report</option>
+          <option value="suppliers">Supplier Performance Report</option>
+        </select>
+        <button class="btn" onclick="exportReport()">
+          <i class="fas fa-download"></i>
+          Export Report
+        </button>
+      </div>
+      <div id="reportPreview" style="margin-top: 1rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <p>Report preview will be displayed here.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== Global Variables ==========
+    let isEditMode = false;
+    let warehouses = JSON.parse(localStorage.getItem('warehouses')) || [];
+    let currentWarehouseId = null; // Tracks the currently selected warehouse for inventory breakdown
+
+    // ========== Section Management ==========
+    const sections = {
+      home: document.getElementById('home'),
+      warehouse: document.getElementById('warehouse'),
+      addWarehouse: document.getElementById('addWarehouse'),
+      inventoryBreakdown: document.getElementById('inventoryBreakdown'),
+      addInventory: document.getElementById('addInventory'),
+      reports: document.getElementById('reports')
+    };
+
+    document.body.addEventListener('click', (e) => {
+      if (e.target.matches('[data-section]')) {
+        showSection(e.target.dataset.section);
+      } else if (e.target.matches('[data-warehouse-id]')) {
+        // Handle clicking on "Total Inventory" link
+        const warehouseId = e.target.dataset.warehouseId;
+        currentWarehouseId = warehouseId;
+        showSection('inventoryBreakdown');
+        initInventoryTable(warehouseId);
+      }
+    });
+
+    function showSection(sectionId) {
+      Object.values(sections).forEach(section => {
+        section.classList.toggle('visible', section.id === sectionId);
+        section.classList.toggle('hidden', section.id !== sectionId);
+      });
+    }
+
+    // ========== Warehouse Management ==========
+    function calculateStockLevel(onHand, backOrdered) {
+      const total = onHand + backOrdered;
+      return total === 0 ? '0%' : `${Math.min((onHand / total) * 100, 100).toFixed(1)}%`;
+    }
+
+    function createWarehouseRow(warehouse, index) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="checkbox-cell"><input type="checkbox" data-index="${index}"></td>
+        <td>${warehouse.name}</td>
+        <td>${warehouse.project}</td>
+        <td>${warehouse.type}</td>
+        <td><a href="#" data-warehouse-id="${warehouse.id}">${calculateTotalInventory(warehouse.id)}</a></td>
+        <td>${calculateStockLevel(warehouse.onHand, warehouse.backOrdered)}</td>
+      `;
+      return tr;
+    }
+
+    function calculateTotalInventory(warehouseId) {
+      const inventory = JSON.parse(localStorage.getItem(`inventory_${warehouseId}`)) || [];
+      return inventory.reduce((sum, item) => sum + (parseInt(item.qtyOnHand) || 0), 0);
+    }
+
+    function addWarehouse() {
+      const warehouse = {
+        id: Date.now().toString(), // Unique ID for each warehouse
+        name: document.getElementById('warehouseName').value,
+        project: document.getElementById('projectName').value,
+        type: document.getElementById('projectType').value,
+        onHand: parseInt(document.getElementById('onHand').value) || 0,
+        backOrdered: parseInt(document.getElementById('backOrdered').value) || 0
+      };
+
+      if (!warehouse.name || !warehouse.project || !warehouse.type) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      warehouses.push(warehouse);
+      localStorage.setItem('warehouses', JSON.stringify(warehouses));
+      initWarehouseTable();
+      showSection('warehouse');
+      clearWarehouseForm();
+    }
+
+    function deleteSelectedWarehouses() {
+      const indexes = Array.from(document.querySelectorAll('#warehouseTable input[type="checkbox"]:checked'))
+                         .map(checkbox => parseInt(checkbox.dataset.index))
+                         .sort((a, b) => b - a);
+
+      indexes.forEach(index => {
+        const warehouseId = warehouses[index].id;
+        warehouses.splice(index, 1);
+        localStorage.removeItem(`inventory_${warehouseId}`); // Remove associated inventory
+      });
+
+      localStorage.setItem('warehouses', JSON.stringify(warehouses));
+      initWarehouseTable();
+    }
+
+    function initWarehouseTable() {
+      const tbody = document.querySelector('#warehouseTable tbody');
+      tbody.innerHTML = '';
+      warehouses.forEach((warehouse, index) => {
+        tbody.appendChild(createWarehouseRow(warehouse, index));
+      });
+    }
+
+    function clearWarehouseForm() {
+      document.getElementById('warehouseName').value = '';
+      document.getElementById('projectName').value = '';
+      document.getElementById('projectType').value = '';
+      document.getElementById('onHand').value = '';
+      document.getElementById('backOrdered').value = '';
+    }
+
+    // ========== Inventory Management ==========
+    function toggleEditMode() {
+      isEditMode = !isEditMode;
+      document.querySelectorAll('#inventoryTable td[contenteditable]').forEach(td => {
+        td.contentEditable = isEditMode;
+      });
+
+      document.getElementById('modifyInventoryBtn').innerHTML = `
+        <i class="fas fa-${isEditMode ? 'times' : 'edit'}"></i>
+        ${isEditMode ? 'Cancel' : 'Edit Mode'}
+      `;
+    }
+
+    function createInventoryRow(item = {}, index) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="checkbox-cell"><input type="checkbox" data-index="${index}"></td>
+        <td contenteditable="${isEditMode}">${item.name || ''}</td>
+        <td contenteditable="${isEditMode}">${item.description || ''}</td>
+        <td contenteditable="${isEditMode}">${item.location || ''}</td>
+        <td contenteditable="${isEditMode}" data-type="number">${item.qtyOnHand || '0'}</td>
+        <td contenteditable="${isEditMode}">${item.unitOfIssue || 'EA'}</td>
+        <td contenteditable="${isEditMode}" data-type="number">${item.backOrderedQty || '0'}</td>
+        <td contenteditable="${isEditMode}">${item.manufacturer || ''}</td>
+        <td contenteditable="${isEditMode}">${item.manufacturerPartNumber || ''}</td>
+        <td><span class="timestamp">${new Date().toLocaleString()}</span></td>
+      `;
+      return tr;
+    }
+
+    function addInventoryItem() {
+      const newItem = {
+        name: document.getElementById('itemName').value,
+        description: document.getElementById('itemDescription').value,
+        location: document.getElementById('itemLocation').value,
+        qtyOnHand: parseInt(document.getElementById('itemQtyOnHand').value) || 0,
+        unitOfIssue: document.getElementById('itemUnitOfIssue').value,
+        backOrderedQty: parseInt(document.getElementById('itemBackOrderedQty').value) || 0,
+        manufacturer: document.getElementById('manufacturerName').value,
+        manufacturerPartNumber: document.getElementById('manufacturerPartNumber').value
+      };
+
+      if (!newItem.name || isNaN(newItem.qtyOnHand)) {
+        alert('Please fill in required fields (Name and Qty on Hand)');
+        return;
+      }
+
+      const inventory = JSON.parse(localStorage.getItem(`inventory_${currentWarehouseId}`)) || [];
+      inventory.push(newItem);
+      localStorage.setItem(`inventory_${currentWarehouseId}`, JSON.stringify(inventory));
+
+      initInventoryTable(currentWarehouseId);
+      showSection('inventoryBreakdown');
+      clearInventoryForm();
+    }
+
+    function initInventoryTable(warehouseId) {
+      const inventory = JSON.parse(localStorage.getItem(`inventory_${warehouseId}`)) || [];
+      const inventoryTable = document.querySelector('#inventoryTable tbody');
+      inventoryTable.replaceChildren(...inventory.map((item, index) => createInventoryRow(item, index)));
+    }
+    function deleteSelectedInventory() {
+      const checkboxes = document.querySelectorAll('#inventoryTable input[type="checkbox"]:checked');
+      const indexes = Array.from(checkboxes)
+                         .map(checkbox => parseInt(checkbox.dataset.index))
+                         .sort((a, b) => b - a);
+
+      if (indexes.length === 0) {
+        alert('Please select items to delete.');
+        return;
+      }
+
+      const inventory = JSON.parse(localStorage.getItem(`inventory_${currentWarehouseId}`)) || [];
+      indexes.forEach(index => inventory.splice(index, 1));
+      localStorage.setItem(`inventory_${currentWarehouseId}`, JSON.stringify(inventory));
+      initInventoryTable(currentWarehouseId);
+    }
+
+    function clearInventoryForm() {
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemDescription').value = '';
+      document.getElementById('itemLocation').value = '';
+      document.getElementById('itemQtyOnHand').value = '';
+      document.getElementById('itemUnitOfIssue').value = 'EA';
+      document.getElementById('itemBackOrderedQty').value = '';
+      document.getElementById('manufacturerName').value = '';
+      document.getElementById('manufacturerPartNumber').value = '';
+    }
+
+    // ========== Excel Import Functionality ==========
+    function importExcel() {
+      document.getElementById('excelInput').click();
+    }
+
+    document.getElementById('excelInput').addEventListener('change', handleExcelFile, false);
+
+    function handleExcelFile(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var data = e.target.result;
+        var workbook = XLSX.read(data, { type: 'binary' });
+        var firstSheetName = workbook.SheetNames[0];
+        var worksheet = workbook.Sheets[firstSheetName];
+        var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        jsonData.shift(); // Remove header row
+        var importedInventory = jsonData.map(row => ({
+          name: row[0] || '',
+          description: row[1] || '',
+          location: row[2] || '',
+          qtyOnHand: parseInt(row[3]) || 0,
+          unitOfIssue: row[4] || 'EA',
+          backOrderedQty: parseInt(row[5]) || 0,
+          manufacturer: row[6] || '',
+          manufacturerPartNumber: row[7] || '',
+          lastModified: new Date().toLocaleString()
+        }));
+
+        const inventory = JSON.parse(localStorage.getItem(`inventory_${currentWarehouseId}`)) || [];
+        const newInventory = inventory.concat(importedInventory);
+        localStorage.setItem(`inventory_${currentWarehouseId}`, JSON.stringify(newInventory));
+        initInventoryTable(currentWarehouseId);
+        e.target.value = ""; // Clear file input
+        alert("Excel file imported successfully!");
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    // ========== Initialization ==========
+    window.addEventListener('DOMContentLoaded', () => {
+      initWarehouseTable();
+    });
+
+    document.getElementById('modifyInventoryBtn').addEventListener('click', toggleEditMode);
+    document.getElementById('saveInventoryBtn').addEventListener('click', () => {
+  const inventory = Array.from(document.querySelectorAll('#inventoryTable tbody tr')).map(tr => ({
+    // Note: Cells now start at index 1 instead of 0 due to checkbox column
+    name: tr.cells[1].textContent,
+    description: tr.cells[2].textContent,
+    location: tr.cells[3].textContent,
+    qtyOnHand: tr.cells[4].textContent,
+    unitOfIssue: tr.cells[5].textContent,
+    backOrderedQty: tr.cells[6].textContent,
+    manufacturer: tr.cells[7].textContent,
+    manufacturerPartNumber: tr.cells[8].textContent,
+    lastModified: tr.cells[9].textContent
+  }));
+  localStorage.setItem(`inventory_${currentWarehouseId}`, JSON.stringify(inventory));
+  alert('Inventory saved successfully!');
+});
+  </script>
+</body> 
+</html>
